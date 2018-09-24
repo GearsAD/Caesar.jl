@@ -13,7 +13,7 @@ end
 
 function addLandmarksFactoGraph!(fg::FactorGraph, f, idx, prevn, nextn;
                     lcmode=:mmodal, lsrNoise=diagm([0.1;1.0]), N::Int=100, MM=Union{})
-    I = intersect(keys(f[idx-1]),keys(f[idx]))
+    @show I = intersect(keys(f[idx-1]),keys(f[idx]))
     for i in I
       pfez = f[idx-1][i]
       fez = f[idx][i]
@@ -22,24 +22,25 @@ function addLandmarksFactoGraph!(fg::FactorGraph, f, idx, prevn, nextn;
         if !haskey(MM,i)
           if !haskey(fg.IDs, lsy)    # has landmark
             # add from previous and latest factor here
-            projNewLandm!(fg, prevn, lsy, [pfez[2];pfez[1]], lsrNoise , N=N )
-            addBRFG!(fg, nextn, lsy, [fez[2];fez[1]], lsrNoise)
+            @show string(prevn), lsy
+            projNewLandm!(fg, string(prevn), lsy, [pfez[2];pfez[1]], lsrNoise , N=N, labels=["LANDMARK";])
+            addBRFG!(fg, string(nextn), lsy, [fez[2];fez[1]], lsrNoise)
           else
             # previous already added, only add the new factor here
-            addBRFG!(fg, nextn, lsy, [fez[2];fez[1]], lsrNoise)
+            addBRFG!(fg, string(nextn), lsy, [fez[2];fez[1]], lsrNoise)
           end
         else
           lsymm = string("l",MM[i])
           if lcmode == :mmodal
             println("Adding bimodal factor")
             if !haskey(fg.IDs, lsy)
-              vlm = projNewLandm!(fg, prevn, lsy, [pfez[2];pfez[1]], lsrNoise, addfactor=false)
-              addMMBRFG!(fg, prevn, [lsymm;lsy], [pfez[2];pfez[1]], lsrNoise, w=[0.5;0.5] )
+              vlm = projNewLandm!(fg, string(prevn), lsy, [pfez[2];pfez[1]], lsrNoise, addfactor=false, labels=["LANDMARK";])
+              addMMBRFG!(fg, string(prevn), [lsymm;lsy], [pfez[2];pfez[1]], lsrNoise, w=[0.5;0.5] )
             end
-            addMMBRFG!(fg, nextn, [lsymm;lsy], [fez[2];fez[1]], lsrNoise, w=[0.5;0.5] )
+            addMMBRFG!(fg, string(nextn), [lsymm;lsy], [fez[2];fez[1]], lsrNoise, w=[0.5;0.5] )
           elseif lcmode == :unimodal
             println("adding unimodal loop closure")
-            addBRFG!(fg, nextn, lsymm, [fez[2];fez[1]], lsrNoise)
+            addBRFG!(fg, string(nextn), lsymm, [fez[2];fez[1]], lsrNoise)
           end
         end
       end
@@ -99,18 +100,18 @@ function doBatchRun(d, f; toT=30)
   return fg, tree, p
 end
 
-function saveImgSeq(d::Dict{Int64,Dict{Int64,Feature}}, lsrFeats::Dict{Int64,LaserFeatures}; from::Int=1,to::Int=10,step::Int=1)
-  for i in from:step:to
-    p = drawFeatTrackers(d[i], lsrFeats[i].feats);
-    Gadfly.draw(PNG(string("imgs/img",i,".png"),35cm,25cm),p)
-  end
-  nothing
-end
-
-
-function drawIROSVicPrkFig(fgl::FactorGraph, d, f, T, isamdict, fgu)
-  p1 = progressExamplePlot(d,f,toT=T);
-  p2 = drawCompPosesLandm(fg,isamdict, fgu, lbls=false,drawunilm=false);
-
-  vstack(p1,p2)
-end
+# function saveImgSeq(d::Dict{Int64,Dict{Int64,Feature}}, lsrFeats::Dict{Int64,LaserFeatures}; from::Int=1,to::Int=10,step::Int=1)
+#   for i in from:step:to
+#     p = drawFeatTrackers(d[i], lsrFeats[i].feats);
+#     Gadfly.draw(PNG(string("imgs/img",i,".png"),35cm,25cm),p)
+#   end
+#   nothing
+# end
+#
+#
+# function drawIROSVicPrkFig(fgl::FactorGraph, d, f, T, isamdict, fgu)
+#   p1 = progressExamplePlot(d,f,toT=T);
+#   p2 = drawCompPosesLandm(fg,isamdict, fgu, lbls=false,drawunilm=false);
+#
+#   vstack(p1,p2)
+# end

@@ -1,10 +1,8 @@
 module Caesar
 
-instpkg = Pkg.installed();
-
-# import RoME: initfg
+# import RoME: initfg # collision on RoME.initfg() since no parameters are given in both RoME and Caesar
 import Distributions: Normal
-import DrakeVisualizer: Triad
+import RoME: getRangeKDEMax2D, getLastPose, initfg
 
 using
   RoME,
@@ -12,38 +10,58 @@ using
   Graphs,
   KernelDensityEstimate,
   Distributions,
-  DrakeVisualizer,
   TransformUtils,
   CoordinateTransformations,
-  GeometryTypes,
   Rotations,
-  Gadfly,
-  Colors,
-  ColorTypes,
   JLD,
   HDF5,
   JSON,
-  MeshIO,
   FileIO,
-  NLsolve,
-  DataStructures
-
-if haskey(instpkg,"CloudGraphs")
-  using CloudGraphs
-  using Neo4j
-end
-
-# using GraphViz, Fontconfig, Cairo, Distributions, DataFrames
-
-
+  DataStructures,
+  ProgressMeter,
+  ImageMagick,
+  ImageCore,
+  DocStringExtensions,
+  CloudGraphs,
+  Neo4j,
+  Mongo,
+  LibBSON
 
 
 export
+  # pass through from KDE
+  kde!,
+  getPoints,
+  getBW,
+  Ndim,
+  Npts,
+
+  # pass through from IIF and RoME
+  ls,
+  FactorGraph,
+  writeGraphPdf,
+  getVert,
+  getVal,
+  saveplot,
+  wipeBuildNewTree!,
+  inferOverTree!,
+  inferOverTreeR!,
+  # callbacks for datalayer changes
+  localapi,
+  dlapi,
   # Victoria Park example -- batch
   loadVicPrkDataset,
-  # addLandmarksFactoGraph!,
-  # appendFactorGraph!,
-  # doBatchRun,
+
+  # passthrough variable and factor types
+  Pose2,
+  Point2,
+
+  # passthrough RoME factor types
+  PriorPose2,
+  Pose2Pose2,
+  Pose2DPoint2DBearingRange, # deprecated
+  Pose2Point2BearingRange, # deprecated
+
   # insitu component
   GenericInSituSystem,
   makeGenericInSituSys,
@@ -65,90 +83,86 @@ export
   # save and load data
   saveSlam,
   loadSlam,
-
-  # more passthrough
-  initfg,
-
-  # cloudgraph
-  usecloudgraphsdatalayer!,
-  # CloudGraph stuff
-  registerGeneralVariableTypes!,
-  fullLocalGraphCopy!,
-  removeGenericMarginals!,
-  setBackendWorkingSet!,
-  setDBAllReady!,
-  getExVertFromCloud,
-  getAllExVertexNeoIDs,
-  getPoseExVertexNeoIDs,
-  copyAllNodes!,
-  copyAllEdges!,
-  registerCallback!,
-  updateFullCloudVertData!,
-
-  #loading frtend generated fg
-  getnewvertdict,
-  insertValuesCloudVert!,
-  recoverConstraintType,
-  populatenewvariablenodes!,
-  updatenewverts!,
-
-  # drawing functions
-  VisualizationContainer,
-  startdefaultvisualization,
-  newtriad!,
-  visualizetriads,
-  visualizeallposes!,
-  visualizeDensityMesh!,
-  updaterealtime!,
-  visualizerealtime,
-  # new tree interface
-  drawpose!,
-  drawmarginalpoints!,
-
-  # for models
-  loadmodel,
-  DrawModel,
-  DrawROV,
-  DrawScene,
-  #deleting functions
-  deletemeshes!,
-
-  # more drawing utils
-  ArcPointsRangeSolve,
-  findaxiscenter!,
-  parameterizeArcAffineMap,
-  animatearc,
-
-  # default scenes
-  defaultscene01!,
+  haselement,
 
   # user functions
   identitypose6fg,
   projectrbe,
-  solveandvisualize,
+  hasval,
 
   # repeats from RoME and IIF
   initfg,
   addNode!,
-  addFactor!
+  addFactor!,
 
+  # CloudGraphs helper functions
+  insertnodefromcv!,
+  checkandinsertedges!,
+  getbinarraymongo,
+  gettopoint,
+  getdotwothree,
+  bin2arr,
+  fetchsubgraph!,
+  getVertNeoIDs!,
+  insertrobotdatafirstpose!,
+  tryunpackalltypes!,
+  fetchrobotdatafirstpose,
+  getExVertexNeoIDs,
+  db2jld,
 
+  # Robot Utils
+  getRangeKDEMax2D,
 
-if instpkg["RoME"] > v"0.0.3"
-  include("BearingRangeTrackingServer.jl")
-else
-  warn("Some features disabled since the package RoME is too far behind.")
-end
+  # would be CloudGraphs calls
+  hasBigDataElement,
+  getBigDataElement,
+  removeNeo4jID,
+
+  # solver service SLAMinDB
+  getcredentials,
+  startSlamInDb,
+  runSlamInDbOnSession,
+  slamindb,
+  convertdb,
+  resetconvertdb,
+  getmaxfactorid,
+
+  # webserver
+  SolverStatus,
+  CaesarConfig,
+  IterationStatistics,
+  VisualizationConfig,
+
+  # multisession utils
+  multisessionquery,
+  parsemultisessionqueryresult!,
+  getLandmOtherSessNeoIDs,
+  getAllLandmarkNeoIDs,
+  getLocalSubGraphMultisession,
+  findExistingMSConstraints,
+  getprpt2kde,
+  rmInstMultisessionPriors!,
+  removeMultisessions!
+
+VoidUnion{T} = Union{Void, T}
+
+include("BearingRangeTrackingServer.jl")
 
 include("SlamServer.jl")
 include("DataUtils.jl")
-include("VisualizationUtils.jl")
-include("ModelVisualizationUtils.jl")
 include("UserFunctions.jl")
 
-if haskey(instpkg, "CloudGraphs")
-  include("CloudGraphIntegration.jl") # Work in progress code
-end
+# Configuration
+include("config/CaesarConfig.jl")
 
+
+# using CloudGraphs
+include("cloudgraphs/SolverStatus.jl")
+include("cloudgraphs/IterationStatistics.jl")
+include("cloudgraphs/CloudGraphIntegration.jl") # Work in progress code
+include("cloudgraphs/ConvertGeneralSlaminDB.jl")
+include("cloudgraphs/slamindb.jl")
+include("cloudgraphs/MultisessionUtils.jl")
+include("cloudgraphs/FoveationUtils.jl")
 
 end

@@ -1,56 +1,71 @@
 # user functions
 
-function identitypose6fg(;
+"""
+    identitypose6fg()
+
+Initialize a and exiting or new factor graph with a first pose and prior as specified by default
+keywords or user.
+"""
+function identitypose6fg(;fg=nothing,
       N::Int=100,
       initCov::Array{Float64,2}=0.001*eye(6),
       initpose::SE3=SE3(0) )
   #
-  fg = initfg()
+  fg = fg != nothing ? fg : initfg()
   N = 100
 
-  println("Adding PriorPose3 and :x1 to graph...")
+  println("Adding PriorPose3 and :x0 to graph...")
   # pts = 0.001*randn(6,N)
-  initPosePrior = PriorPose3(initpose, initCov)
+  initPosePrior = PriorPose3( MvNormal(veeEuler(initpose), initCov)  )
   pts = getSample(initPosePrior,N)[1]
-  v0 = addNode!(fg, :x1,  pts,  N=N)
+  v0 = addNode!(fg, :x0,  pts,  N=N, labels=["POSE"])
   f1  = addFactor!(fg,[v0], initPosePrior)
   return fg
 end
 
 
-function solveandvisualize(fg::FactorGraph,
-      vc::DrakeVisualizer.Visualizer;
-      refresh::Number=1.0,
-      densitymeshes::Vector{Symbol}=Symbol[],
-      drawlandms::Bool=true,
-      N::Int=100,
-      drawtype::Symbol=:max )
-  #
-  deletemeshes!(vc)
+# function solveandvisualize(fg::FactorGraph,
+#       vc::DrakeVisualizer.Visualizer;
+#       refresh::Number=1.0,
+#       densitymeshes::Vector{Symbol}=Symbol[],
+#       drawlandms::Bool=true,
+#       N::Int=100,
+#       drawtype::Symbol=:max,
+#       gt::Dict{Symbol, Tuple{Symbol,Vector{Float64}}}=Dict{Symbol, Tuple{Symbol,Vector{Float64}}}() )
+#   #
+#   deletemeshes!(vc)
+#
+#   # draw while solving[1]==true
+#   solving = [true]
+#   @async begin
+#     while solving[1]
+#       println(".")
+#       visualizeallposes!(vc, fg, drawlandms=drawlandms, drawtype=drawtype, gt=gt)
+#       i = 1
+#       deletemeshes!(vc)
+#       for dm in densitymeshes
+#         i+=1
+#         visualizeDensityMesh!(vc, fg, dm)
+#       end
+#       sleep(1)
+#     end
+#   end
+#
+#   # solve
+#   tree = wipeBuildNewTree!(fg)
+#   @time inferOverTree!(fg, tree, N=N)
+#   solving[1]=false;
+#   nothing
+# end
 
-  # draw while solving[1]==true
-  solving = [true]
-  @async begin
-    while solving[1]
-      println(".")
-      visualizeallposes!(vc, fg, drawlandms=drawlandms, drawtype=drawtype)
-      i = 1
-      deletemeshes!(vc)
-      for dm in densitymeshes
-        i+=1
-        visualizeDensityMesh!(vc, fg, dm)
-      end
-      sleep(1)
+function hasval(d::Dict, va)
+  for (k,v) in d
+    if v == va
+      return true
     end
   end
-
-  # solve
-  tree = wipeBuildNewTree!(fg)
-  @time inferOverTree!(fg, tree, N=N)
-  solving[1]=false;
-  nothing
+  return false
 end
-
 
 
 function projectrbe(fgl::FactorGraph, from::Symbol, to::Vector{Float64})
@@ -86,8 +101,6 @@ function projectrbe(fgl::FactorGraph, from::Symbol, to::Symbol)
   # elev = -atan2(Dx[3],norm(Dx[1:2]))
   # return range, bearing, elev
 end
-
-
 
 
 

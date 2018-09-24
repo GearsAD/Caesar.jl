@@ -1,21 +1,24 @@
-julia 0.5
-RoME
-IncrementalInference
-Graphs
-KernelDensityEstimate
+julia 0.6
+RoME 0.1.3
+IncrementalInference 0.3.4
+Graphs 0.9.0
+KernelDensityEstimate 0.3.0
 Distributions
-DrakeVisualizer
-TransformUtils
-CoordinateTransformations
-GeometryTypes
+CloudGraphs 0.0.2
+Neo4j 1.0.0
+LibBSON
+Mongo 0.2.3
+TransformUtils 0.1.0
 Rotations
-Gadfly
-Colors
-ColorTypes
+CoordinateTransformations 0.5.0
 JLD
 HDF5
 JSON
-MeshIO
 FileIO
 NLsolve
+LCMCore
 DataStructures
+ProgressMeter
+ImageMagick
+ImageCore
+DocStringExtensions 0.4.1
